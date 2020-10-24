@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+package liftbridge;
+
+option go_package = "github.com/alexrudd/lb-teams/infra/lb";
+
+message Message {
+    google.protobuf.Any payload = 1;
+}

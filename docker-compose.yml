@@ -1,0 +1,22 @@
+version: "3.7"
+
+services:
+  teams:
+    image: teams-svc
+    build:
+      context: .
+      target: dev
+      args:
+        GO_MAIN_PACKAGE: ./cmd/teams
+    container_name: teams
+    restart: on-failure
+    depends_on:
+      - liftbridge
+    ports:
+      - 8080:8080
+
+  liftbridge:
+    image: liftbridge/standalone-dev
+    container_name: liftbridge
+    environment:
+      LIFTBRIDGE_HOST: liftbridge
