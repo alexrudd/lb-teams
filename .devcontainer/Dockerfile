@@ -27,7 +27,6 @@ ARG GO_VER=1.15.3
 ARG GOPLS_VER=latest
 ARG GODLV_VER=latest
 ARG GO_LINT_VER=1.31.0
-ARG GRPC_VER=latest
 ARG PROTOC_VER=3.13.0
 ARG PROTOC_GO_VER=latest
 
@@ -74,9 +73,7 @@ RUN unzip /tmp/protoc.zip -d /tmp/protoc && \
     chmod -R +xr /usr/local/include/google
 
 # Protoc Go Generator
-RUN go get github.com/golang/protobuf/protoc-gen-go@${PROTOC_GO_VER}
-# GRPC
-RUN go get google.golang.org/grpc@${GRPC_VER}
+RUN go get google.golang.org/protobuf/cmd/protoc-gen-go@${PROTOC_GO_VER}
 
 # Clean up
 RUN rm -rf /tmp/*

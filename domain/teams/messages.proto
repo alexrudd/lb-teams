@@ -6,6 +6,7 @@ option go_package = "github.com/alexrudd/lb-teams/domain/teams";
 
 message CreateTeam {
     string user_id = 1;
+    string team_id = 2;
 }
 
 message TeamCreated {
@@ -28,6 +29,22 @@ message LeaveTeam {
 }
 
 message TeamLeft {
+    string user_id = 1;
+    string team_id = 2;
+}
+
+message ChangeOwner {
+    string user_id = 1;
+    string new_owner_user_id = 2;
+}
+
+message OwnerChanged {
+    string user_id = 1;
+    string team_id = 2;
+    string new_owner_user_id = 3;
+}
+
+message BecameOwner {
     string user_id = 1;
     string team_id = 2;
 }

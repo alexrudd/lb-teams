@@ -6,6 +6,8 @@ import (
 	"log"
 
 	"github.com/alexrudd/lb-teams/domain"
+	"github.com/nats-io/nats.go"
+
 	lift "github.com/liftbridge-io/go-liftbridge/v2"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -14,45 +16,44 @@ import (
 // LiftBridgeEventStore implements domain.EventStore using
 // LiftBridge.
 type LiftBridgeEventStore struct {
-	client lift.Client
+	nc  *nats.Conn
+	lbc lift.Client
 }
 
 // NewLiftBridgeEventStore returns a new LiftBridgeEventStore that is
 // connected to a LiftBridge cluster.
-func NewLiftBridgeEventStore(addrs []string) (*LiftBridgeEventStore, error) {
-	client, err := lift.Connect(addrs)
-	if err != nil {
-		return nil, fmt.Errorf("connecting to liftbridge server: %w", err)
-	}
-
+func NewLiftBridgeEventStore(nc *nats.Conn, lbc lift.Client) *LiftBridgeEventStore {
 	return &LiftBridgeEventStore{
-		client: client,
-	}, nil
+		nc:  nc,
+		lbc: lbc,
+	}
 }
 
 // Close closes the internal Liftbridge client.
 func (es *LiftBridgeEventStore) Close() error {
-	return es.client.Close()
+	return es.lbc.Close()
 }
 
 // GetStream attempts to get a stream using the provided ID
 // and returns all events in that stream.
-func (es *LiftBridgeEventStore) GetStream(ctx context.Context, streamID string) (domain.Stream, error) {
-	err := es.client.CreateStream(ctx, streamID, streamID)
+func (es *LiftBridgeEventStore) GetStream(ctx context.Context, aggregate, id string) (domain.Stream, error) {
+	streamID := aggregate + "." + id
+
+	err := es.lbc.CreateStream(ctx, streamID, streamID)
 	if err != nil {
 		if err != lift.ErrStreamExists {
 			return nil, fmt.Errorf("creating stream: %w", err)
 		}
 	}
 
-	md, err := es.client.FetchPartitionMetadata(ctx, streamID, 0)
+	md, err := es.lbc.FetchPartitionMetadata(ctx, streamID, 0)
 	if err != nil {
 		return nil, fmt.Errorf("fetching partition metadata: %w", err)
 	}
 
 	if md.NewestOffset() == -1 {
 		return &stream{
-			client:   es.client,
+			client:   es.lbc,
 			streamID: streamID,
 			events:   nil,
 		}, nil
@@ -62,7 +63,7 @@ func (es *LiftBridgeEventStore) GetStream(ctx context.Context, streamID string) 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	err = es.client.Subscribe(ctx, streamID, func(msg *lift.Message, err error) {
+	err = es.lbc.Subscribe(ctx, streamID, func(msg *lift.Message, err error) {
 		if err != nil {
 			log.Printf("received error from stream: %s", err)
 			return
@@ -98,10 +99,29 @@ func (es *LiftBridgeEventStore) GetStream(ctx context.Context, streamID string) 
 	}
 
 	return &stream{
-		client:   es.client,
+		client:   es.lbc,
 		streamID: streamID,
 		events:   events,
 	}, nil
+}
+
+func (es *LiftBridgeEventStore) Subscribe(aggregate string, handler domain.EventHandler) error {
+	_, err := es.nc.Subscribe(aggregate+".>", func(msg *nats.Msg) {
+		envelope := &Message{}
+		err := proto.Unmarshal(msg.Data, envelope)
+		if err != nil {
+			return
+		}
+
+		e, err := envelope.GetPayload().UnmarshalNew()
+		if err != nil {
+			return
+		}
+
+		handler(context.Background(), e)
+	})
+
+	return err
 }
 
 type stream struct {
