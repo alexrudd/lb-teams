@@ -5,9 +5,6 @@ services:
     image: teams-svc
     build:
       context: .
-      target: dev
-      args:
-        GO_MAIN_PACKAGE: ./cmd/teams
     container_name: teams
     restart: on-failure
     depends_on:

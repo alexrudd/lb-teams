@@ -6,8 +6,6 @@ The goal of the project is to implement a simple **User** aggregate that capture
 
 The commands supported by the User aggregate are:
 
-* CreateTeam - `curl localhost:8080/CreateTeam -d '{"userId":"bob","teamId":"party"}'`
-* JoinTeam - `curl localhost:8080/JoinTeam -d '{"userId":"alice","teamId":"party"}'`
-* LeaveTeam  - `curl localhost:8080/LeaveTeam -d '{"userId":"alice","teamId":"party"}'`
-* ChangeOwner - `curl localhost:8080/ChangeOwner -d '{"userId":"bob","newOwnerUserId":"alice"}'`
-* DisbandTeam - `curl localhost:8080/DisbandTeam -d '{"userId":"alice"}'`
+* InviteUserToTeam - `curl localhost:8080/InviteUserToTeam -d '{"userId":"bob","teamId":"party"}'`
+* AcceptInvite - `curl localhost:8080/AcceptInvite -d '{"userId":"bob","teamId":"party"}'`
+* LeaveTeam  - `curl localhost:8080/LeaveTeam -d '{"userId":"bob","teamId":"party"}'`

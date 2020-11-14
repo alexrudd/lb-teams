@@ -4,15 +4,17 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/alexrudd/lb-teams/domain/teams"
+	"github.com/alexrudd/lb-teams/domain/user"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
-// NewHTTPTeamsHandler returns an http.Handler for receiving teams commands.
-func NewHTTPTeamsHandler(handler teams.UserCommandHandler) http.Handler {
+// NewHTTPUserCommandHandler returns an http.Handler for receiving user
+// commands.
+func NewHTTPUserCommandHandler(handler user.CommandHandler) http.Handler {
 	mux := http.NewServeMux()
 
-	handleRequest := func(rw http.ResponseWriter, r *http.Request, cmd teams.UserCommand) {
+	handleRequest := func(rw http.ResponseWriter, r *http.Request, msg proto.Message) {
 		defer r.Body.Close()
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -20,9 +22,15 @@ func NewHTTPTeamsHandler(handler teams.UserCommandHandler) http.Handler {
 			return
 		}
 
-		err = protojson.Unmarshal(b, cmd)
+		err = protojson.Unmarshal(b, msg)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		cmd, ok := msg.(user.Command)
+		if !ok {
+			http.Error(rw, "request does not implement user.Command", http.StatusBadRequest)
 			return
 		}
 
@@ -31,29 +39,19 @@ func NewHTTPTeamsHandler(handler teams.UserCommandHandler) http.Handler {
 			return
 		}
 	}
-	// CreateTeam
-	mux.Handle("/CreateTeam", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		handleRequest(rw, r, &teams.CreateTeam{})
+	// InviteUserToTeam
+	mux.Handle("/InviteUserToTeam", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		handleRequest(rw, r, &user.InviteUserToTeam{})
 	}))
 
-	// JoinTeam
-	mux.Handle("/JoinTeam", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		handleRequest(rw, r, &teams.JoinTeam{})
+	// AcceptInvite
+	mux.Handle("/AcceptInvite", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		handleRequest(rw, r, &user.AcceptInvite{})
 	}))
 
 	// LeaveTeam
 	mux.Handle("/LeaveTeam", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		handleRequest(rw, r, &teams.LeaveTeam{})
-	}))
-
-	// ChangeOwner
-	mux.Handle("/ChangeOwner", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		handleRequest(rw, r, &teams.ChangeOwner{})
-	}))
-
-	// DisbandTeam
-	mux.Handle("/DisbandTeam", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		handleRequest(rw, r, &teams.DisbandTeam{})
+		handleRequest(rw, r, &user.LeaveTeam{})
 	}))
 
 	return mux

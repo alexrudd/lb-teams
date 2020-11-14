@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/alexrudd/lb-teams/domain/user";
+
+
+// Invite User to Team
+message InviteUserToTeam {
+    string user_id = 1;
+    string team_id = 2;
+}
+
+message UserInvitedToTeam {
+    string user_id = 1;
+    string team_id = 2;
+}
+
+// Accept Invite
+message AcceptInvite {
+    string user_id = 1;
+    string team_id = 2;
+}
+
+message UserAcceptedInvite {
+    string user_id = 1;
+    string team_id = 2;
+}
+
+// Leave Team
+message LeaveTeam {
+    string user_id = 1;
+}
+
+message UserLeftTeam {
+    string user_id = 1;
+    string team_id = 2;
+}
+
+// Assign Team to User
+message AssignTeamToUser {
+    string user_id = 1;
+    string team_id = 2;
+}
+
+message UserAssignedTeam {
+    string user_id = 1;
+    string team_id = 2;
+}

@@ -12,11 +12,11 @@ type EventStore interface {
 	Subscribe(aggregate string, handler EventHandler) error
 }
 
-// EventHandler is a function that handles User events
-type EventHandler func(context.Context, proto.Message)
-
 // Stream contains all events published by an aggregate instance.
 type Stream interface {
-	Events() []proto.Message
+	Events() <-chan proto.Message
 	Publish(ctx context.Context, event proto.Message) error
 }
+
+// EventHandler is a function that handles events
+type EventHandler func(context.Context, proto.Message)

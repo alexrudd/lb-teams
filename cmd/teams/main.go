@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/alexrudd/lb-teams/app/api"
-	"github.com/alexrudd/lb-teams/domain/teams"
+	"github.com/alexrudd/lb-teams/domain/user"
 	"github.com/alexrudd/lb-teams/infra/lb"
 	"github.com/nats-io/nats.go"
 
@@ -33,13 +33,10 @@ func main() {
 	eventStore := lb.NewLiftBridgeEventStore(nc, lbc)
 
 	// domain
-	teamsHandler := teams.NewUserCommandHandler(eventStore)
-	if err := teams.SetupEventHandlers(eventStore); err != nil {
-		panic(err)
-	}
+	userHandler := user.NewCommandHandler(eventStore)
 
 	// app
-	httpHandler := api.NewHTTPTeamsHandler(teamsHandler)
+	httpHandler := api.NewHTTPUserCommandHandler(userHandler)
 
 	if err := http.ListenAndServe(*httpAddr, httpHandler); err != nil {
 		panic(err)

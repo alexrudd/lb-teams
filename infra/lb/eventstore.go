@@ -51,6 +51,8 @@ func (es *LiftBridgeEventStore) GetStream(ctx context.Context, aggregate, id str
 		return nil, fmt.Errorf("fetching partition metadata: %w", err)
 	}
 
+	log.Printf("got stream for ID: %s\n", id)
+
 	if md.NewestOffset() == -1 {
 		return &stream{
 			client:   es.lbc,
@@ -59,9 +61,9 @@ func (es *LiftBridgeEventStore) GetStream(ctx context.Context, aggregate, id str
 		}, nil
 	}
 
-	msgChan := make(chan *lift.Message)
+	envelope := &Message{}
+	eventChan := make(chan proto.Message)
 	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	err = es.lbc.Subscribe(ctx, streamID, func(msg *lift.Message, err error) {
 		if err != nil {
@@ -69,39 +71,33 @@ func (es *LiftBridgeEventStore) GetStream(ctx context.Context, aggregate, id str
 			return
 		}
 
-		msgChan <- msg
+		err = proto.Unmarshal(msg.Value(), envelope)
+		if err != nil {
+			log.Printf("error unmarshalling message from stream %s: %s", streamID, err)
+			return
+		}
+
+		event, err := envelope.GetPayload().UnmarshalNew()
+		if err != nil {
+			log.Printf("error unmarshalling payload from stream %s: %s", streamID, err)
+			return
+		}
+
+		eventChan <- event
+
+		if msg.Offset() == md.NewestOffset() {
+			close(eventChan)
+			cancel()
+		}
 	}, lift.StartAtEarliestReceived())
 	if err != nil {
 		return nil, fmt.Errorf("subscribing to stream: %w", err)
 	}
 
-	var (
-		events   = []proto.Message{}
-		envelope = &Message{}
-	)
-
-	for m := range msgChan {
-		err = proto.Unmarshal(m.Value(), envelope)
-		if err != nil {
-			return nil, fmt.Errorf("error unmarshalling message from stream %s: %s", streamID, err)
-		}
-
-		e, err := envelope.GetPayload().UnmarshalNew()
-		if err != nil {
-			return nil, fmt.Errorf("error unmarshalling payload from stream %s: %s", streamID, err)
-		}
-
-		events = append(events, e)
-
-		if m.Offset() == md.NewestOffset() {
-			break
-		}
-	}
-
 	return &stream{
 		client:   es.lbc,
 		streamID: streamID,
-		events:   events,
+		events:   eventChan,
 	}, nil
 }
 
@@ -127,10 +123,10 @@ func (es *LiftBridgeEventStore) Subscribe(aggregate string, handler domain.Event
 type stream struct {
 	client   lift.Client
 	streamID string
-	events   []proto.Message
+	events   <-chan proto.Message
 }
 
-func (s *stream) Events() []proto.Message {
+func (s *stream) Events() <-chan proto.Message {
 	return s.events
 }
 
