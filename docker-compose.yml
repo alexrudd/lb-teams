@@ -15,5 +15,7 @@ services:
   liftbridge:
     image: liftbridge/standalone-dev
     container_name: liftbridge
+    volumes:
+      - ./liftbridge.yaml:/liftbridge.yaml
     environment:
       LIFTBRIDGE_HOST: liftbridge

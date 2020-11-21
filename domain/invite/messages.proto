@@ -1,0 +1,140 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package teams.invite;
+
+option go_package = "github.com/alexrudd/lb-teams/domain/invite";
+
+// Team Formation
+
+// Send
+message SendTeamFormationInvite {
+    string inviter_user_id = 2;
+    string invitee_user_id = 3;
+}
+
+message TeamFormationInviteSent {
+    string invite_id = 1;
+    string inviter_user_id = 2;
+    string invitee_user_id = 3;
+    google.protobuf.Timestamp timestamp = 4;
+}
+
+// Decline
+message DeclineTeamFormationInvite {
+    string invite_id = 1;
+}
+
+message TeamFormationInviteDeclined {
+    string invite_id = 1;
+    string inviter_user_id = 2;
+    string invitee_user_id = 3;
+    google.protobuf.Timestamp timestamp = 4;
+}
+
+// Cancel
+message CancelTeamFormationInvite {
+    string invite_id = 1;
+}
+
+message TeamFormationInviteCancelled {
+    string invite_id = 1;
+    string inviter_user_id = 2;
+    string invitee_user_id = 3;
+    google.protobuf.Timestamp timestamp = 4;
+}
+
+// Expire
+message ExpireTeamFormationInvite {
+    string invite_id = 1;
+}
+
+message TeamFormationInviteExpired {
+    string invite_id = 1;
+    string inviter_user_id = 2;
+    string invitee_user_id = 3;
+    google.protobuf.Timestamp timestamp = 4;
+}
+
+// Accept
+message AcceptTeamFormationInvite {
+    string invite_id = 1;
+}
+
+message TeamFormationInviteAccepted {
+    string invite_id = 1;
+    string inviter_user_id = 2;
+    string invitee_user_id = 3;
+    google.protobuf.Timestamp timestamp = 4;
+}
+
+
+// Team Invite
+
+// Send
+message SendTeamInvite {
+    string team_id = 1;
+    string inviter_user_id = 2;
+    string invitee_user_id = 3;
+}
+
+message TeamInviteSent {
+    string invite_id = 1;
+    string team_id = 2;
+    string inviter_user_id = 3;
+    string invitee_user_id = 4;
+    google.protobuf.Timestamp timestamp = 5;
+}
+
+// Decline
+message DeclineTeamInvite {
+    string invite_id = 1;
+}
+
+message TeamInviteDeclined {
+    string invite_id = 1;
+    string team_id = 2;
+    string inviter_user_id = 3;
+    string invitee_user_id = 4;
+    google.protobuf.Timestamp timestamp = 5;
+}
+
+// Cancel
+message CancelTeamInvite {
+    string invite_id = 1;
+}
+
+message TeamInviteCancelled {
+    string invite_id = 1;
+    string team_id = 2;
+    string inviter_user_id = 3;
+    string invitee_user_id = 4;
+    google.protobuf.Timestamp timestamp = 5;
+}
+
+// Expire
+message ExpireTeamInvite {
+    string invite_id = 1;
+}
+
+message TeamInviteExpired {
+    string invite_id = 1;
+    string team_id = 2;
+    string inviter_user_id = 3;
+    string invitee_user_id = 4;
+    google.protobuf.Timestamp timestamp = 5;
+}
+
+// Accept
+message AcceptTeamInvite {
+    string invite_id = 1;
+}
+
+message TeamInviteAccepted {
+    string invite_id = 1;
+    string team_id = 2;
+    string inviter_user_id = 3;
+    string invitee_user_id = 4;
+    google.protobuf.Timestamp timestamp = 5;
+}

@@ -1,11 +1,15 @@
 syntax = "proto3";
 
 import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
 
 package liftbridge;
 
 option go_package = "github.com/alexrudd/lb-teams/infra/lb";
 
-message Message {
-    google.protobuf.Any payload = 1;
+message Event {
+    int64                     offset       = 1;
+    google.protobuf.Timestamp pub_timstamp = 2;
+    string                    stream_name  = 3;
+    google.protobuf.Any       raw_data     = 4;
 }
