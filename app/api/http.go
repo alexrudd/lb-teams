@@ -9,13 +9,19 @@ import (
 
 	"github.com/alexrudd/lb-teams/domain/invite"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 type InviteFactoryHandler func(context.Context, invite.Factory) error
+type InviteCommandHandler func(context.Context, invite.Command) error
 
-// NewHTTPInviteCommandHandler returns an http.Handler for receiving user
-// commands.
-func NewHTTPInviteHandler(inviteFactoryHandler InviteFactoryHandler, view *invite.PendingInvitesView) http.Handler {
+// NewHTTPInviteHandler returns an http.Handler for receiving invite commands
+// and queries.
+func NewHTTPInviteHandler(
+	inviteFactoryHandler InviteFactoryHandler,
+	inviteCommandHandler InviteCommandHandler,
+	view *invite.PendingInvitesView,
+) http.Handler {
 	mux := http.NewServeMux()
 	// SendTeamFormationInvite
 	mux.Handle("/SendTeamFormationInvite", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -45,6 +51,42 @@ func NewHTTPInviteHandler(inviteFactoryHandler InviteFactoryHandler, view *invit
 		}
 	}))
 
+	handler := func(msg func() proto.Message) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				http.Error(rw, "this endpoint only accepts POST requests", http.StatusMethodNotAllowed)
+				return
+			}
+
+			defer r.Body.Close()
+			b, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				http.Error(rw, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			m := msg()
+
+			err = protojson.Unmarshal(b, m)
+			if err != nil {
+				http.Error(rw, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			if err = inviteCommandHandler(r.Context(), m.(invite.Command)); err != nil {
+				http.Error(rw, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		})
+	}
+	// DeclineTeamFormationInvite
+	mux.Handle("/DeclineTeamFormationInvite", handler(func() proto.Message { return &invite.DeclineTeamFormationInvite{} }))
+	// CancelTeamFormationInvite
+	mux.Handle("/CancelTeamFormationInvite", handler(func() proto.Message { return &invite.CancelTeamFormationInvite{} }))
+	// AcceptTeamFormationInvite
+	mux.Handle("/AcceptTeamFormationInvite", handler(func() proto.Message { return &invite.AcceptTeamFormationInvite{} }))
+
+	// Query Inbox
 	mux.Handle("/Inbox", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(rw, "this endpoint only accepts GET requests", http.StatusMethodNotAllowed)

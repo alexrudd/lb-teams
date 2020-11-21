@@ -28,13 +28,14 @@ func main() {
 
 	// domain
 	inviteFacHandler := invite.NewFactoryHandler(eventStore)
+	inviteCmdHandler := invite.NewCommandHandler(eventStore)
 	pendingInvitesView, err := invite.InitialisePendingInvitesView(eventStore)
 	if err != nil {
 		panic(err)
 	}
 
 	// app
-	httpHandler := api.NewHTTPInviteHandler(inviteFacHandler, pendingInvitesView)
+	httpHandler := api.NewHTTPInviteHandler(inviteFacHandler, inviteCmdHandler, pendingInvitesView)
 
 	if err := http.ListenAndServe(*httpAddr, httpHandler); err != nil {
 		panic(err)

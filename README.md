@@ -9,6 +9,9 @@ The goal of this project is to implement a simple domain of **Users** and **Team
 ### Commands
 
 * Send Team Formation Invite: `curl -XPOST localhost:8080/SendTeamFormationInvite -d '{"inviterUserId":"alice","inviteeUserId":"bob"}'`
+* Send Team Formation Invite: `curl -XPOST localhost:8080/DeclineTeamFormationInvite -d '{"inviteId":"abc123"}'`
+* Send Team Formation Invite: `curl -XPOST localhost:8080/CancelTeamFormationInvite -d '{"inviteId":"abc123"}'`
+* Send Team Formation Invite: `curl -XPOST localhost:8080/AcceptTeamFormationInvite -d '{"inviteId":"abc123"}'`
 
 ### Queries
 

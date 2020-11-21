@@ -53,6 +53,22 @@ func (piv *PendingInvitesView) eventHandler(ctx context.Context, event domain.Ev
 			inviterUserID: e.GetInviterUserId(),
 			inviteeUserID: e.GetInviteeUserId(),
 		}
+	case *TeamFormationInviteDeclined:
+		if _, ok := piv.userInboxes[e.GetInviteeUserId()]; ok {
+			delete(piv.userInboxes[e.GetInviteeUserId()].invites, e.GetInviteId())
+		}
+	case *TeamFormationInviteCancelled:
+		if _, ok := piv.userInboxes[e.GetInviteeUserId()]; ok {
+			delete(piv.userInboxes[e.GetInviteeUserId()].invites, e.GetInviteId())
+		}
+	case *TeamFormationInviteExpired:
+		if _, ok := piv.userInboxes[e.GetInviteeUserId()]; ok {
+			delete(piv.userInboxes[e.GetInviteeUserId()].invites, e.GetInviteId())
+		}
+	case *TeamFormationInviteAccepted:
+		if _, ok := piv.userInboxes[e.GetInviteeUserId()]; ok {
+			delete(piv.userInboxes[e.GetInviteeUserId()].invites, e.GetInviteId())
+		}
 	}
 }
 

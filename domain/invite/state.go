@@ -10,8 +10,20 @@ import (
 
 const Name = "invite"
 
+type status int8
+
+const (
+	pending status = iota
+	declined
+	cancelled
+	expired
+	accepted
+)
+
 type state struct {
 	id            string
+	status        status
+	teamID        string
 	inviterUserID string
 	inviteeUserID string
 }
