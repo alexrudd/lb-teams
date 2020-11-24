@@ -3,6 +3,7 @@ package lb
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -42,6 +43,8 @@ func (es *LiftBridgeEventStore) Close() error {
 // events in that stream.
 func (es *LiftBridgeEventStore) GetStream(ctx context.Context, aggregate, id string) (domain.Stream, error) {
 	streamID := aggregate + "." + id
+
+	log.Printf("[%s] Retreiving aggregate instance stream", streamID)
 
 	err := es.lbc.CreateStream(ctx, streamID, streamID)
 	if err != nil {
@@ -91,6 +94,8 @@ type stream struct {
 func (s *stream) Events() []domain.Event {
 	var events []domain.Event
 
+	log.Printf("[%s] Fetching stream events", s.streamID)
+
 	for e := range s.events {
 		s.latestOffet = e.GetOffset()
 		events = append(events, e)
@@ -101,6 +106,8 @@ func (s *stream) Events() []domain.Event {
 
 // Publish publishes a new event to the stream.
 func (s *stream) Publish(ctx context.Context, event proto.Message) error {
+	log.Printf("[%s] Publishing event of type %T", s.streamID, event)
+
 	data, err := anypb.New(event)
 	if err != nil {
 		return fmt.Errorf("marshalling data: %w", err)
@@ -127,6 +134,7 @@ func (s *stream) Publish(ctx context.Context, event proto.Message) error {
 }
 
 func (es *LiftBridgeEventStore) GetAggregateStream(ctx context.Context, aggregateType string) (domain.AggregateStream, error) {
+	log.Printf("[%s] Retreiving aggregate type stream", aggregateType)
 
 	return &aggregateStream{
 		ctx:           ctx,
@@ -145,6 +153,8 @@ type aggregateStream struct {
 }
 
 func (as *aggregateStream) Bind(handler domain.EventHandler) error {
+	log.Printf("[%s] Binding handler to stream", as.aggregateType)
+
 	as.handler = handler
 	ctx, cancel := context.WithCancel(as.ctx)
 	as.cancels["__activity"] = cancel
@@ -199,6 +209,8 @@ func (as *aggregateStream) handleActivityMsg(msg *lift.Message, err error) {
 			return
 		}
 
+		log.Printf("[%s] Add instance stream (%s) to type stream", as.aggregateType, stream)
+
 		ctx, cancel := context.WithCancel(as.ctx)
 		_ = as.lbc.Subscribe(ctx, stream, as.handlerEvent, lift.StartAtEarliestReceived())
 
@@ -210,6 +222,8 @@ func (as *aggregateStream) handleActivityMsg(msg *lift.Message, err error) {
 		if aggregateType != as.aggregateType {
 			return
 		}
+
+		log.Printf("[%s] Removing instance stream (%s) from type stream", as.aggregateType, stream)
 
 		if c, ok := as.cancels[stream]; ok {
 			c()

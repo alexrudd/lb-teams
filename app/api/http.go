@@ -7,7 +7,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/alexrudd/lb-teams/domain"
 	"github.com/alexrudd/lb-teams/domain/invite"
+	"github.com/alexrudd/lb-teams/domain/views"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -18,38 +20,10 @@ type InviteCommandHandler func(context.Context, invite.Command) error
 // NewHTTPInviteHandler returns an http.Handler for receiving invite commands
 // and queries.
 func NewHTTPInviteHandler(
-	inviteFactoryHandler InviteFactoryHandler,
-	inviteCommandHandler InviteCommandHandler,
-	view *invite.PendingInvitesView,
+	bus domain.CommandBus,
+	view *views.PendingInvitesView,
 ) http.Handler {
 	mux := http.NewServeMux()
-	// SendTeamFormationInvite
-	mux.Handle("/SendTeamFormationInvite", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(rw, "this endpoint only accepts POST requests", http.StatusMethodNotAllowed)
-			return
-		}
-
-		defer r.Body.Close()
-		b, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		cmd := &invite.SendTeamFormationInvite{}
-
-		err = protojson.Unmarshal(b, cmd)
-		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if err = inviteFactoryHandler(r.Context(), cmd); err != nil {
-			http.Error(rw, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}))
 
 	handler := func(msg func() proto.Message) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -65,20 +39,22 @@ func NewHTTPInviteHandler(
 				return
 			}
 
-			m := msg()
+			cmd := msg()
 
-			err = protojson.Unmarshal(b, m)
+			err = protojson.Unmarshal(b, cmd)
 			if err != nil {
 				http.Error(rw, err.Error(), http.StatusBadRequest)
 				return
 			}
 
-			if err = inviteCommandHandler(r.Context(), m.(invite.Command)); err != nil {
+			if err = bus.SubmitCommand(r.Context(), cmd); err != nil {
 				http.Error(rw, err.Error(), http.StatusInternalServerError)
 				return
 			}
 		})
 	}
+	// SendTeamFormationInvite
+	mux.Handle("/SendTeamFormationInvite", handler(func() proto.Message { return &invite.SendTeamFormationInvite{} }))
 	// DeclineTeamFormationInvite
 	mux.Handle("/DeclineTeamFormationInvite", handler(func() proto.Message { return &invite.DeclineTeamFormationInvite{} }))
 	// CancelTeamFormationInvite
@@ -118,7 +94,7 @@ type serializableInbox struct {
 	Invites []serializableInvite
 }
 
-func transform(in invite.UserInbox) serializableInbox {
+func transform(in views.UserInbox) serializableInbox {
 	out := serializableInbox{
 		UserID: in.UserID(),
 	}

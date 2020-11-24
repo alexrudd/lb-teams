@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package teams.team;
+
+option go_package = "github.com/alexrudd/lb-teams/domain/team";
+
+// Form
+message FormTeam {
+    string owner_user_id = 1;
+    string member_user_id = 2;
+}
+
+message TeamFormed {
+    string team_id = 1;
+    string owner_user_id = 2;
+    string member_user_id = 3;
+}

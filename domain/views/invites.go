@@ -1,10 +1,12 @@
-package invite
+package views
 
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/alexrudd/lb-teams/domain"
+	"github.com/alexrudd/lb-teams/domain/invite"
 )
 
 type PendingInvitesView struct {
@@ -12,9 +14,9 @@ type PendingInvitesView struct {
 }
 
 func InitialisePendingInvitesView(store domain.EventStore) (*PendingInvitesView, error) {
-	stream, err := store.GetAggregateStream(context.Background(), Name)
+	stream, err := store.GetAggregateStream(context.Background(), invite.Name)
 	if err != nil {
-		return nil, fmt.Errorf("getting aggregate stream for %s: %w", Name, err)
+		return nil, fmt.Errorf("getting aggregate stream for %s: %w", invite.Name, err)
 	}
 
 	piv := &PendingInvitesView{
@@ -22,7 +24,7 @@ func InitialisePendingInvitesView(store domain.EventStore) (*PendingInvitesView,
 	}
 
 	if err := stream.Bind(piv.eventHandler); err != nil {
-		return nil, fmt.Errorf("binding to aggregate stream for %s: %w", Name, err)
+		return nil, fmt.Errorf("binding to aggregate stream for %s: %w", invite.Name, err)
 	}
 
 	return piv, nil
@@ -40,7 +42,7 @@ func (piv *PendingInvitesView) GetUserInbox(id string) UserInbox {
 
 func (piv *PendingInvitesView) eventHandler(ctx context.Context, event domain.Event) {
 	switch e := event.Data().(type) {
-	case *TeamFormationInviteSent:
+	case *invite.TeamFormationInviteSent:
 		if _, ok := piv.userInboxes[e.GetInviteeUserId()]; !ok {
 			piv.userInboxes[e.GetInviteeUserId()] = &UserInbox{
 				userID:  e.GetInviteeUserId(),
@@ -53,22 +55,24 @@ func (piv *PendingInvitesView) eventHandler(ctx context.Context, event domain.Ev
 			inviterUserID: e.GetInviterUserId(),
 			inviteeUserID: e.GetInviteeUserId(),
 		}
-	case *TeamFormationInviteDeclined:
+	case *invite.TeamFormationInviteDeclined:
 		if _, ok := piv.userInboxes[e.GetInviteeUserId()]; ok {
 			delete(piv.userInboxes[e.GetInviteeUserId()].invites, e.GetInviteId())
 		}
-	case *TeamFormationInviteCancelled:
+	case *invite.TeamFormationInviteCancelled:
 		if _, ok := piv.userInboxes[e.GetInviteeUserId()]; ok {
 			delete(piv.userInboxes[e.GetInviteeUserId()].invites, e.GetInviteId())
 		}
-	case *TeamFormationInviteExpired:
+	case *invite.TeamFormationInviteExpired:
 		if _, ok := piv.userInboxes[e.GetInviteeUserId()]; ok {
 			delete(piv.userInboxes[e.GetInviteeUserId()].invites, e.GetInviteId())
 		}
-	case *TeamFormationInviteAccepted:
+	case *invite.TeamFormationInviteAccepted:
 		if _, ok := piv.userInboxes[e.GetInviteeUserId()]; ok {
 			delete(piv.userInboxes[e.GetInviteeUserId()].invites, e.GetInviteId())
 		}
+	default:
+		log.Printf("[PendingInvitesView] ignoring event of type %T", event.Data())
 	}
 }
 

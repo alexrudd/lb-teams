@@ -3,13 +3,16 @@ package invite
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/alexrudd/lb-teams/domain"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
 )
 
 const Name = "invite"
 
+// status represents the posible states an invite can be in.
 type status int8
 
 const (
@@ -20,6 +23,7 @@ const (
 	accepted
 )
 
+// state stores the aggregate for a particular invite stream.
 type state struct {
 	id            string
 	status        status
@@ -28,9 +32,35 @@ type state struct {
 	inviteeUserID string
 }
 
-// NewFactoryHandler handler invite creation.
-func NewFactoryHandler(store domain.EventStore) func(context.Context, Factory) error {
-	return func(ctx context.Context, fac Factory) error {
+func RegisterWithCommandBus(bus domain.CommandBus, store domain.EventStore) {
+	var (
+		facHandler = NewFactoryHandler(store)
+		cmdHandler = NewCommandHandler(store)
+	)
+
+	bus.RegisterHandler(&SendTeamFormationInvite{}, facHandler)
+	bus.RegisterHandler(&SendTeamInvite{}, facHandler)
+
+	bus.RegisterHandler(&DeclineTeamFormationInvite{}, cmdHandler)
+	bus.RegisterHandler(&CancelTeamFormationInvite{}, cmdHandler)
+	bus.RegisterHandler(&ExpireTeamFormationInvite{}, cmdHandler)
+	bus.RegisterHandler(&AcceptTeamFormationInvite{}, cmdHandler)
+	bus.RegisterHandler(&DeclineTeamInvite{}, cmdHandler)
+	bus.RegisterHandler(&CancelTeamInvite{}, cmdHandler)
+	bus.RegisterHandler(&ExpireTeamInvite{}, cmdHandler)
+	bus.RegisterHandler(&AcceptTeamInvite{}, cmdHandler)
+}
+
+// NewFactoryHandler handler invite foactor commands.
+func NewFactoryHandler(store domain.EventStore) domain.CommandHandler {
+	return func(ctx context.Context, msg proto.Message) error {
+		fac, ok := msg.(Factory)
+		if !ok {
+			return domain.ErrNoHandlerForCommand
+		}
+
+		log.Printf("[Invite] Received factory command of type %T", fac)
+
 		if err := fac.Validate(); err != nil {
 			return fmt.Errorf("validating factory command for invite: %w", err)
 		}
@@ -53,8 +83,15 @@ func NewFactoryHandler(store domain.EventStore) func(context.Context, Factory) e
 }
 
 // NewCommandHandler handles invite commands.
-func NewCommandHandler(store domain.EventStore) func(context.Context, Command) error {
-	return func(ctx context.Context, cmd Command) error {
+func NewCommandHandler(store domain.EventStore) domain.CommandHandler {
+	return func(ctx context.Context, msg proto.Message) error {
+		cmd, ok := msg.(Command)
+		if !ok {
+			return domain.ErrNoHandlerForCommand
+		}
+
+		log.Printf("[Invite] Received command of type %T", cmd)
+
 		if err := cmd.Validate(); err != nil {
 			return fmt.Errorf("validating command for invite %s: %w", cmd.GetInviteId(), err)
 		}
@@ -85,6 +122,7 @@ func NewCommandHandler(store domain.EventStore) func(context.Context, Command) e
 
 // RehydrateState rehydrates an invite's state.
 func RehydrateState(events []domain.Event) *state {
+	log.Printf("[Invite] Rehydrating state with %d events", len(events))
 	s := &state{}
 
 	for _, e := range events {
